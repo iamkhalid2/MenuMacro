@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Configuration
-    const API_URL = 'http://localhost:3000';
+    const API_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000'
+        : window.location.origin;
     
     // DOM Elements
     const uploadArea = document.getElementById('upload-area');
