@@ -77,6 +77,8 @@ async function fileToGenerativePart(filePath) {
 
 // API endpoint for analyzing menu image
 app.post('/analyze-menu', upload.single('image'), async (req, res) => {
+  let imagePath = null;
+  
   try {
     if (!genAI) {
       return res.status(503).json({ error: 'Gemini API is not properly configured' });
@@ -86,7 +88,7 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    const imagePath = req.file.path;
+    imagePath = req.file.path;
     
     // Get the image as a generative part
     const imagePart = await fileToGenerativePart(imagePath);
@@ -169,6 +171,12 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       return res.json(analysisData);
     } catch (parseError) {
       console.error('Error parsing JSON response:', parseError);
+      
+      // Clean up the uploaded file even if JSON parsing fails
+      if (imagePath && fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+      
       return res.status(500).json({ 
         error: 'Error parsing analysis results', 
         rawResponse: text 
@@ -176,6 +184,12 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     }
   } catch (error) {
     console.error('Error analyzing menu:', error);
+    
+    // Clean up the uploaded file even if analysis fails
+    if (imagePath && fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+    
     return res.status(500).json({ error: 'Error analyzing menu: ' + error.message });
   }
 });
