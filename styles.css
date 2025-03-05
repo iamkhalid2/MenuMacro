@@ -238,6 +238,7 @@ header p {
     border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
 
 .food-list li:last-child {
@@ -245,20 +246,50 @@ header p {
 }
 
 /* Special Category Styling */
-#high-protein-list .category {
+.category:nth-child(1) {
     border-left-color: #dc3545;
 }
 
-#high-carbs-list .category {
+.category:nth-child(1) h3 i {
+    color: #dc3545;
+}
+
+.category:nth-child(2) {
     border-left-color: #ffc107;
 }
 
-#high-fats-list .category {
+.category:nth-child(2) h3 i {
+    color: #ffc107;
+}
+
+.category:nth-child(3) {
     border-left-color: #17a2b8;
 }
 
-#balanced-list {
-    border-left-color: #28a745;
+.category:nth-child(3) h3 i {
+    color: #17a2b8;
+}
+
+.tab-content#balanced-options h3 {
+    color: #28a745;
+}
+
+/* Macro Nutrient Display */
+.macros {
+    background-color: #f5f5f5;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Empty List State */
+.empty-list {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem 0;
 }
 
 /* Footer */
@@ -267,6 +298,23 @@ footer {
     margin-top: 2rem;
     padding: 1rem;
     color: #666;
+}
+
+/* API Key Notice */
+.api-key-notice {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    display: none; /* Hidden by default, will be shown via JS if needed */
+}
+
+.api-key-notice a {
+    color: #856404;
+    font-weight: bold;
+    text-decoration: underline;
 }
 
 /* Responsive Design */
@@ -282,5 +330,15 @@ footer {
     
     .button-group {
         flex-direction: column;
+    }
+    
+    .food-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .macros {
+        margin-top: 0.5rem;
+        align-self: flex-start;
     }
 }
