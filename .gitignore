@@ -55,3 +55,6 @@ Desktop.ini
 quickstarts/
 codebase_analysis.md
 new_improvement_plan.md
+
+# Uploads directory (temporary files)
+uploads/

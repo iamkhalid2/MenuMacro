@@ -37,7 +37,7 @@ const upload = multer({ storage: storage });
 
 // Initialize Gemini API
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-const MODEL_ID = "gemini-2.0-pro-exp-02-05"; // Using Gemini 2.0 Flash model
+const MODEL_ID = "gemini-2.0-flash"; // Using Gemini 2.0 Flash model
 let genAI;
 
 try {
