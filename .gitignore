@@ -58,3 +58,4 @@ new_improvement_plan.md
 
 # Uploads directory (temporary files)
 uploads/
+.vercel

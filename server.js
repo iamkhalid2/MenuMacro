@@ -14,8 +14,15 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the root directory
-app.use(express.static(__dirname));
+// Serve static files from the root directory with proper caching
+app.use(express.static(__dirname, {
+  maxAge: '1h',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css') || path.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  }
+}));
 
 // Configure memory storage for uploaded images
 const storage = multer.memoryStorage();
@@ -27,12 +34,11 @@ const MODEL_ID = "gemini-2.0-flash"; // Using Gemini 2.0 Flash model
 let genAI;
 
 try {
-  if (!GOOGLE_API_KEY || GOOGLE_API_KEY === 'your_gemini_api_key_here') {
-    console.warn('Invalid or missing API key. Some features will be unavailable.');
-  } else {
-    genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-    console.log('Gemini API initialized successfully with model:', MODEL_ID);
+  if (!GOOGLE_API_KEY) {
+    throw new Error('Missing GOOGLE_API_KEY environment variable');
   }
+  genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+  console.log('Gemini API initialized successfully with model:', MODEL_ID);
 } catch (error) {
   console.error('Error initializing Gemini API:', error);
 }
@@ -44,7 +50,7 @@ app.get('/health', (req, res) => {
   } else {
     res.status(503).json({ 
       status: 'unavailable', 
-      message: 'API is not properly configured. Please set your GOOGLE_API_KEY in .env file.' 
+      message: 'API is not properly configured. Please check server logs.' 
     });
   }
 });
@@ -151,6 +157,16 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
   } catch (error) {
     console.error('Error analyzing menu:', error);
     return res.status(500).json({ error: 'Error analyzing menu: ' + error.message });
+  }
+});
+
+// Handle all static file requests first
+app.get('/:filename', (req, res, next) => {
+  const filename = req.params.filename;
+  if (filename.match(/\.(js|css|jpg|png|ico)$/)) {
+    res.sendFile(path.join(__dirname, filename));
+  } else {
+    next();
   }
 });
 
