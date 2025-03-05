@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
@@ -18,21 +17,8 @@ app.use(express.json());
 // Serve static files from the root directory
 app.use(express.static(__dirname));
 
-// Configure file storage for uploaded images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, 'uploads');
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-
+// Configure memory storage for uploaded images
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Initialize Gemini API
@@ -63,13 +49,11 @@ app.get('/health', (req, res) => {
   }
 });
 
-// Helper function to read image file as base64
-async function fileToGenerativePart(filePath) {
-  const mimeType = 'image/jpeg'; // Adjust based on your file type
-  const fileBuffer = fs.readFileSync(filePath);
+// Helper function to convert buffer to generative part
+function bufferToGenerativePart(buffer, mimeType = 'image/jpeg') {
   return {
     inlineData: {
-      data: fileBuffer.toString('base64'),
+      data: buffer.toString('base64'),
       mimeType: mimeType
     }
   };
@@ -77,8 +61,6 @@ async function fileToGenerativePart(filePath) {
 
 // API endpoint for analyzing menu image
 app.post('/analyze-menu', upload.single('image'), async (req, res) => {
-  let imagePath = null;
-  
   try {
     if (!genAI) {
       return res.status(503).json({ error: 'Gemini API is not properly configured' });
@@ -88,10 +70,8 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
-    imagePath = req.file.path;
-    
-    // Get the image as a generative part
-    const imagePart = await fileToGenerativePart(imagePath);
+    // Convert buffer to generative part
+    const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
     
     // Configure Gemini model
     const model = genAI.getGenerativeModel({ model: MODEL_ID });
@@ -118,16 +98,15 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     `;
 
     // Generate content with Gemini 2.0
-    // Note: We removed the responseMimeType that was causing the error
     const result = await model.generateContent({
       contents: [
         { role: "user", parts: [{ text: prompt }, imagePart] }
       ],
       generationConfig: {
-        temperature: 0.2,  // Lower temperature for more focused and accurate responses
+        temperature: 0.2,
         topP: 0.8,
         topK: 40,
-        maxOutputTokens: 8192,  // Increased token limit for more detailed analysis
+        maxOutputTokens: 8192,
       },
       safetySettings: [
         {
@@ -160,23 +139,10 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
                         [null, text];
       const jsonStr = jsonMatch[1] || text;
       
-      console.log("Response text:", text.substring(0, 200) + "...");
-      console.log("Extracted JSON string:", jsonStr.substring(0, 200) + "...");
-      
       const analysisData = JSON.parse(jsonStr);
-      
-      // Clean up the uploaded file
-      fs.unlinkSync(imagePath);
-      
       return res.json(analysisData);
     } catch (parseError) {
       console.error('Error parsing JSON response:', parseError);
-      
-      // Clean up the uploaded file even if JSON parsing fails
-      if (imagePath && fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
-      
       return res.status(500).json({ 
         error: 'Error parsing analysis results', 
         rawResponse: text 
@@ -184,12 +150,6 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     }
   } catch (error) {
     console.error('Error analyzing menu:', error);
-    
-    // Clean up the uploaded file even if analysis fails
-    if (imagePath && fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
-    }
-    
     return res.status(500).json({ error: 'Error analyzing menu: ' + error.message });
   }
 });
@@ -202,6 +162,5 @@ app.get('*', (req, res) => {
 // Start the server
 app.listen(port, () => {
   console.log(`MenuMacro server running on port ${port}`);
-  console.log(`Access the application at http://localhost:${port}`);
   console.log(`Using Gemini model: ${MODEL_ID}`);
 });
