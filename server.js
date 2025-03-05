@@ -14,7 +14,9 @@ const port = process.env.PORT || 3000;
 // Configure middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+
+// Serve static files from the root directory
+app.use(express.static(__dirname));
 
 // Configure file storage for uploaded images
 const storage = multer.diskStorage({
@@ -34,7 +36,32 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+const MODEL_ID = "gemini-2.0-flash"; // Using the latest and most powerful Gemini model
+let genAI;
+
+try {
+  if (!GOOGLE_API_KEY || GOOGLE_API_KEY === 'your_gemini_api_key_here') {
+    console.warn('Invalid or missing API key. Some features will be unavailable.');
+  } else {
+    genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+    console.log('Gemini API initialized successfully with model:', MODEL_ID);
+  }
+} catch (error) {
+  console.error('Error initializing Gemini API:', error);
+}
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  if (genAI) {
+    res.json({ status: 'ok', message: 'API is available', model: MODEL_ID });
+  } else {
+    res.status(503).json({ 
+      status: 'unavailable', 
+      message: 'API is not properly configured. Please set your GOOGLE_API_KEY in .env file.' 
+    });
+  }
+});
 
 // Helper function to read image file as base64
 async function fileToGenerativePart(filePath) {
@@ -51,6 +78,10 @@ async function fileToGenerativePart(filePath) {
 // API endpoint for analyzing menu image
 app.post('/analyze-menu', upload.single('image'), async (req, res) => {
   try {
+    if (!genAI) {
+      return res.status(503).json({ error: 'Gemini API is not properly configured' });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'No image uploaded' });
     }
@@ -61,7 +92,11 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     const imagePart = await fileToGenerativePart(imagePath);
     
     // Configure Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: MODEL_ID });
+    
+    // Enhanced system instruction for the more powerful model
+    const systemInstruction = `You are a nutritional expert specializing in analyzing food and estimating macronutrient content. 
+    When analyzing a menu image, carefully extract all food items and estimate their macronutrient content accurately.`;
 
     // Prepare prompt to analyze menu items and categorize them
     const prompt = `
@@ -84,8 +119,38 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       }
     `;
 
-    // Generate content with Gemini
-    const result = await model.generateContent([prompt, imagePart]);
+    // Generate content with Gemini 2.0
+    const result = await model.generateContent({
+      contents: [
+        { role: "user", parts: [{ text: prompt }, imagePart] }
+      ],
+      generationConfig: {
+        temperature: 0.2,  // Lower temperature for more focused and accurate responses
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 8192,  // Increased token limit for more detailed analysis
+        responseMimeType: "application/json",  // Request JSON output directly
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        }
+      ]
+    });
+    
     const response = await result.response;
     const text = response.text();
     
@@ -95,7 +160,7 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
                         text.match(/```\n([\s\S]*?)\n```/) || 
                         [null, text];
-      const jsonStr = jsonMatch[1];
+      const jsonStr = jsonMatch[1] || text;
       const analysisData = JSON.parse(jsonStr);
       
       // Clean up the uploaded file
@@ -115,7 +180,14 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
   }
 });
 
+// Catch-all route to serve the main index.html for any route not matched
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`MenuMacro server running on port ${port}`);
+  console.log(`Access the application at http://localhost:${port}`);
+  console.log(`Using Gemini model: ${MODEL_ID}`);
 });
