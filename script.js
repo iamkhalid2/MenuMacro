@@ -15,9 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsSection = document.getElementById('results-section');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const apiKeyNotice = document.getElementById('api-key-notice');
 
-    // Store the captured/uploaded image file
+    // App state
     let currentImageFile = null;
+    let apiAvailable = false;
+
+    // Check API availability on load
+    checkApiAvailability();
 
     // Event Listeners
     uploadBtn.addEventListener('click', () => {
@@ -55,6 +60,31 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Functions
+    async function checkApiAvailability() {
+        try {
+            const response = await fetch(`${API_URL}/health`, { 
+                method: 'GET',
+                timeout: 5000 // 5 second timeout
+            });
+            
+            if (response.ok) {
+                apiAvailable = true;
+                apiKeyNotice.style.display = 'none';
+            } else {
+                showApiNotice();
+            }
+        } catch (error) {
+            console.error('API health check failed:', error);
+            showApiNotice();
+        }
+    }
+
+    function showApiNotice() {
+        apiAvailable = false;
+        apiKeyNotice.style.display = 'block';
+        console.warn('API not available. Demo mode will be used.');
+    }
+
     function openCamera() {
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
@@ -151,23 +181,35 @@ document.addEventListener('DOMContentLoaded', function() {
         previewContainer.style.display = 'none';
         
         try {
-            // Create form data for image upload
-            const formData = new FormData();
-            formData.append('image', currentImageFile);
+            let analysisData;
             
-            // Send image to backend for analysis
-            const response = await fetch(`${API_URL}/analyze-menu`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to analyze menu');
+            if (apiAvailable) {
+                // Create form data for image upload
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+                
+                // Send image to backend for analysis
+                const response = await fetch(`${API_URL}/analyze-menu`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to analyze menu');
+                }
+                
+                // Process the analysis result
+                analysisData = await response.json();
+            } else {
+                // Use mock data if API is not available
+                console.log('Using mock data for demo purposes');
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                analysisData = mockAnalysisData();
             }
             
-            // Process the analysis result
-            const analysisData = await response.json();
+            // Process and display results
             processMenuAnalysis(analysisData);
             
             // Show results
@@ -178,7 +220,17 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error analyzing menu:', error);
             loadingSection.style.display = 'none';
             previewContainer.style.display = 'block';
-            alert(`Error analyzing menu: ${error.message || 'Unknown error'}`);
+            
+            // If API failed, try mock data
+            if (apiAvailable) {
+                const tryMockData = confirm(`Error analyzing menu: ${error.message || 'Unknown error'}. Would you like to see demo results instead?`);
+                if (tryMockData) {
+                    apiAvailable = false;
+                    analyzeMenuImage();
+                }
+            } else {
+                alert(`Error analyzing menu: ${error.message || 'Unknown error'}`);
+            }
         }
     }
 
