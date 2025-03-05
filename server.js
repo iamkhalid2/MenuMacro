@@ -37,7 +37,7 @@ const upload = multer({ storage: storage });
 
 // Initialize Gemini API
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-const MODEL_ID = "gemini-2.0-flash"; // Using the latest and most powerful Gemini model
+const MODEL_ID = "gemini-2.0-pro-exp-02-05"; // Using Gemini 2.0 Flash model
 let genAI;
 
 try {
@@ -94,10 +94,6 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     // Configure Gemini model
     const model = genAI.getGenerativeModel({ model: MODEL_ID });
     
-    // Enhanced system instruction for the more powerful model
-    const systemInstruction = `You are a nutritional expert specializing in analyzing food and estimating macronutrient content. 
-    When analyzing a menu image, carefully extract all food items and estimate their macronutrient content accurately.`;
-
     // Prepare prompt to analyze menu items and categorize them
     const prompt = `
       Analyze this menu image and extract all food items. For each item, estimate its macronutrient content 
@@ -109,7 +105,7 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
       3. High Fats (items where fat is the dominant macronutrient)
       4. Balanced (items with a relatively even distribution of macronutrients)
       
-      Return the results as a JSON object with this structure:
+      Return the results as a valid JSON object without any markdown formatting or code blocks, with this structure:
       {
         "highProtein": [{"name": "item name", "protein": X, "carbs": Y, "fats": Z}],
         "highCarbs": [{"name": "item name", "protein": X, "carbs": Y, "fats": Z}],
@@ -120,6 +116,7 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     `;
 
     // Generate content with Gemini 2.0
+    // Note: We removed the responseMimeType that was causing the error
     const result = await model.generateContent({
       contents: [
         { role: "user", parts: [{ text: prompt }, imagePart] }
@@ -129,7 +126,6 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
         topP: 0.8,
         topK: 40,
         maxOutputTokens: 8192,  // Increased token limit for more detailed analysis
-        responseMimeType: "application/json",  // Request JSON output directly
       },
       safetySettings: [
         {
@@ -161,6 +157,10 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
                         text.match(/```\n([\s\S]*?)\n```/) || 
                         [null, text];
       const jsonStr = jsonMatch[1] || text;
+      
+      console.log("Response text:", text.substring(0, 200) + "...");
+      console.log("Extracted JSON string:", jsonStr.substring(0, 200) + "...");
+      
       const analysisData = JSON.parse(jsonStr);
       
       // Clean up the uploaded file
@@ -176,7 +176,7 @@ app.post('/analyze-menu', upload.single('image'), async (req, res) => {
     }
   } catch (error) {
     console.error('Error analyzing menu:', error);
-    return res.status(500).json({ error: 'Error analyzing menu' });
+    return res.status(500).json({ error: 'Error analyzing menu: ' + error.message });
   }
 });
 
