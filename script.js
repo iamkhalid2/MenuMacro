@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Configuration
+    const API_URL = 'http://localhost:3000';
+    
     // DOM Elements
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('file-input');
@@ -12,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsSection = document.getElementById('results-section');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+
+    // Store the captured/uploaded image file
+    let currentImageFile = null;
 
     // Event Listeners
     uploadBtn.addEventListener('click', () => {
@@ -87,10 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Convert canvas to blob and create file object
                     canvas.toBlob(blob => {
-                        const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+                        currentImageFile = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
                         
                         // Display preview
-                        displayImagePreview(file);
+                        displayImagePreview(currentImageFile);
                         
                         // Stop the camera stream
                         stream.getTracks().forEach(track => track.stop());
@@ -107,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleImageUpload(event) {
         const file = event.target.files[0];
         if (file && file.type.startsWith('image/')) {
+            currentImageFile = file;
             displayImagePreview(file);
         } else {
             alert('Please select a valid image file.');
@@ -130,21 +137,49 @@ document.addEventListener('DOMContentLoaded', function() {
         previewContainer.style.display = 'none';
         resultsSection.style.display = 'none';
         fileInput.value = '';
+        currentImageFile = null;
     }
 
-    function analyzeMenuImage() {
+    async function analyzeMenuImage() {
+        if (!currentImageFile) {
+            alert('Please capture or upload an image first.');
+            return;
+        }
+
         // Show loading state
         loadingSection.style.display = 'block';
         previewContainer.style.display = 'none';
         
-        // Simulating API call to analyze image
-        // In a real app, you would send the image to a backend service for processing
-        setTimeout(() => {
-            processMenuAnalysis(mockAnalysisData());
+        try {
+            // Create form data for image upload
+            const formData = new FormData();
+            formData.append('image', currentImageFile);
             
+            // Send image to backend for analysis
+            const response = await fetch(`${API_URL}/analyze-menu`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to analyze menu');
+            }
+            
+            // Process the analysis result
+            const analysisData = await response.json();
+            processMenuAnalysis(analysisData);
+            
+            // Show results
             loadingSection.style.display = 'none';
             resultsSection.style.display = 'block';
-        }, 2000); // Simulating processing time
+            
+        } catch (error) {
+            console.error('Error analyzing menu:', error);
+            loadingSection.style.display = 'none';
+            previewContainer.style.display = 'block';
+            alert(`Error analyzing menu: ${error.message || 'Unknown error'}`);
+        }
     }
 
     function processMenuAnalysis(data) {
@@ -156,41 +191,65 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('all-items-list').innerHTML = '';
         
         // Populate lists
-        data.highProtein.forEach(item => {
-            addItemToList('high-protein-list', item);
-        });
+        if (data.highProtein && data.highProtein.length > 0) {
+            data.highProtein.forEach(item => {
+                addItemToList('high-protein-list', item);
+            });
+        } else {
+            document.getElementById('high-protein-list').innerHTML = '<li class="empty-list">No high protein items found</li>';
+        }
         
-        data.highCarbs.forEach(item => {
-            addItemToList('high-carbs-list', item);
-        });
+        if (data.highCarbs && data.highCarbs.length > 0) {
+            data.highCarbs.forEach(item => {
+                addItemToList('high-carbs-list', item);
+            });
+        } else {
+            document.getElementById('high-carbs-list').innerHTML = '<li class="empty-list">No high carb items found</li>';
+        }
         
-        data.highFats.forEach(item => {
-            addItemToList('high-fats-list', item);
-        });
+        if (data.highFats && data.highFats.length > 0) {
+            data.highFats.forEach(item => {
+                addItemToList('high-fats-list', item);
+            });
+        } else {
+            document.getElementById('high-fats-list').innerHTML = '<li class="empty-list">No high fat items found</li>';
+        }
         
-        data.balanced.forEach(item => {
-            addItemToList('balanced-list', item);
-        });
+        if (data.balanced && data.balanced.length > 0) {
+            data.balanced.forEach(item => {
+                addItemToList('balanced-list', item);
+            });
+        } else {
+            document.getElementById('balanced-list').innerHTML = '<li class="empty-list">No balanced items found</li>';
+        }
         
-        data.allItems.forEach(item => {
-            addItemToList('all-items-list', item);
-        });
+        if (data.allItems && data.allItems.length > 0) {
+            data.allItems.forEach(item => {
+                addItemToList('all-items-list', item);
+            });
+        } else {
+            document.getElementById('all-items-list').innerHTML = '<li class="empty-list">No items detected</li>';
+        }
     }
 
     function addItemToList(listId, item) {
         const list = document.getElementById(listId);
         const listItem = document.createElement('li');
         
+        // Format macros with rounding to 1 decimal place
+        const protein = parseFloat(item.protein).toFixed(1);
+        const carbs = parseFloat(item.carbs).toFixed(1);
+        const fats = parseFloat(item.fats).toFixed(1);
+        
         listItem.innerHTML = `
             <span>${item.name}</span>
-            <span class="macros">P: ${item.protein}g | C: ${item.carbs}g | F: ${item.fats}g</span>
+            <span class="macros">P: ${protein}g | C: ${carbs}g | F: ${fats}g</span>
         `;
         
         list.appendChild(listItem);
     }
 
-    // Mock data for demonstration purposes
-    // In a real app, this would come from a backend API
+    // Fallback data for testing/demo purposes
     function mockAnalysisData() {
         return {
             highProtein: [
