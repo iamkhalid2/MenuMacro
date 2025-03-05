@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MenuMacro - Food Nutrition Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MenuMacro</h1>
+            <p>Analyze menu photos and discover the nutritional balance of your food options</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div class="upload-area" id="upload-area">
+                    <i class="fas fa-camera"></i>
+                    <p>Take a photo or upload from gallery</p>
+                    <div class="button-group">
+                        <button id="camera-btn" class="btn primary-btn">
+                            <i class="fas fa-camera"></i> Take Photo
+                        </button>
+                        <button id="upload-btn" class="btn secondary-btn">
+                            <i class="fas fa-upload"></i> Upload Image
+                        </button>
+                        <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+                <div id="preview-container" class="preview-container" style="display: none;">
+                    <img id="image-preview" src="#" alt="Menu Preview">
+                    <div class="preview-actions">
+                        <button id="analyze-btn" class="btn primary-btn">Analyze Menu</button>
+                        <button id="retake-btn" class="btn secondary-btn">Choose Different Image</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="loading-section" class="loading-section" style="display: none;">
+                <div class="loader"></div>
+                <p>Analyzing menu items...</p>
+            </section>
+
+            <section id="results-section" class="results-section" style="display: none;">
+                <h2>Menu Analysis Results</h2>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="macronutrient-categories">Categories</button>
+                    <button class="tab-btn" data-target="balanced-options">Balanced Options</button>
+                    <button class="tab-btn" data-target="all-items">All Items</button>
+                </div>
+
+                <div id="macronutrient-categories" class="tab-content active">
+                    <div class="category">
+                        <h3><i class="fas fa-dumbbell"></i> High Protein</h3>
+                        <ul id="high-protein-list" class="food-list"></ul>
+                    </div>
+                    <div class="category">
+                        <h3><i class="fas fa-bolt"></i> High Carbs</h3>
+                        <ul id="high-carbs-list" class="food-list"></ul>
+                    </div>
+                    <div class="category">
+                        <h3><i class="fas fa-bacon"></i> High Fats</h3>
+                        <ul id="high-fats-list" class="food-list"></ul>
+                    </div>
+                </div>
+
+                <div id="balanced-options" class="tab-content">
+                    <h3>Most Balanced & Healthy Options</h3>
+                    <ul id="balanced-list" class="food-list"></ul>
+                </div>
+
+                <div id="all-items" class="tab-content">
+                    <h3>All Menu Items</h3>
+                    <ul id="all-items-list" class="food-list"></ul>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2023 MenuMacro. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
