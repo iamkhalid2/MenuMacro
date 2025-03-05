@@ -67,10 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 timeout: 5000 // 5 second timeout
             });
             
-            if (response.ok) {
+            const data = await response.json();
+            if (response.ok && data.status === 'ok') {
                 apiAvailable = true;
                 apiKeyNotice.style.display = 'none';
             } else {
+                console.warn('API status:', data.message);
                 showApiNotice();
             }
         } catch (error) {
