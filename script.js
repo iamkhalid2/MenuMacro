@@ -19,10 +19,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabContents = document.querySelectorAll('.tab-content');
     const apiKeyNotice = document.getElementById('api-key-notice');
     const container = document.querySelector('.container');
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const htmlRoot = document.documentElement;
 
     // App state
     let currentImageFile = null;
     let apiAvailable = false;
+    let currentTheme = localStorage.getItem('theme') || 'light';
+
+    // Initialize theme
+    setTheme(currentTheme);
 
     // Apply initial animation to food icons in loader
     positionFoodIcons();
@@ -64,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     retakeBtn.addEventListener('click', resetImageUpload);
 
+    // Theme toggle event listener
+    themeToggle.addEventListener('click', toggleTheme);
+
     // Tab navigation with smooth transitions
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -89,6 +99,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Functions
+    function setTheme(theme) {
+        htmlRoot.setAttribute('data-theme', theme);
+        
+        // Update icon based on theme
+        if (theme === 'dark') {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        } else {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('theme', theme);
+        currentTheme = theme;
+    }
+
+    function toggleTheme() {
+        // Add spin animation
+        themeToggle.classList.add('pulse-animation');
+        setTimeout(() => {
+            themeToggle.classList.remove('pulse-animation');
+        }, 300);
+        
+        // Toggle theme
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        
+        // Apply transition effect to body
+        document.body.style.transition = 'background-color 0.5s ease, color 0.5s ease';
+    }
+
     function positionFoodIcons() {
         const foodIcons = document.querySelectorAll('.food-icon');
         foodIcons.forEach((icon, index) => {
