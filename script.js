@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const retakeBtn = document.getElementById('retake-btn');
     const loadingSection = document.getElementById('loading-section');
     const resultsSection = document.getElementById('results-section');
+    const homeBtn = document.getElementById('home-btn');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     const apiKeyNotice = document.getElementById('api-key-notice');
@@ -70,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     retakeBtn.addEventListener('click', resetImageUpload);
+    
+    // Add home button event listener
+    homeBtn.addEventListener('click', resetToHome);
 
     // Theme toggle event listener
     themeToggle.addEventListener('click', toggleTheme);
@@ -149,6 +153,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function resetToHome() {
+        // Add animation to home button
+        homeBtn.classList.add('pulse-animation');
+        setTimeout(() => {
+            homeBtn.classList.remove('pulse-animation');
+        }, 300);
+        
+        // Fade out results section
+        resultsSection.style.opacity = '0';
+        resultsSection.style.transform = 'scale(0.95)';
+        resultsSection.style.transition = 'all 0.4s ease';
+        
+        // After fade out, show upload area
+        setTimeout(() => {
+            resultsSection.style.display = 'none';
+            uploadArea.style.display = 'block';
+            
+            // Reset upload area and animate it
+            uploadArea.style.opacity = '0';
+            uploadArea.style.transform = 'translateY(-20px)';
+            uploadArea.style.transition = 'all 0.4s ease';
+            
+            setTimeout(() => {
+                uploadArea.style.opacity = '1';
+                uploadArea.style.transform = 'translateY(0)';
+            }, 50);
+            
+            // Reset state
+            fileInput.value = '';
+            currentImageFile = null;
+        }, 400);
+    }
+
     async function checkApiAvailability() {
         try {
             const response = await fetch(`${API_URL}/health`, { 
@@ -185,7 +222,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function openCamera() {
-        navigator.mediaDevices.getUserMedia({ video: true })
+        // Configure camera to prefer the environment-facing camera (back camera) on mobile devices
+        const cameraOptions = { 
+            video: {
+                facingMode: isMobile() ? "environment" : "user" // Use back camera on mobile, front camera on desktop
+            } 
+        };
+
+        navigator.mediaDevices.getUserMedia(cameraOptions)
             .then(stream => {
                 // Create video element to show camera feed
                 const videoEl = document.createElement('video');
@@ -283,6 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Could not access camera. Please check permissions or use upload option instead.');
                 fileInput.click();
             });
+    }
+
+    // Helper function to detect mobile devices
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
     function handleImageUpload(event) {
