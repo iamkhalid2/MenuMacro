@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,9 @@
                 <img src="assets/icon.jpg" alt="MenuMacro Logo" class="logo rounded">
                 <h1>MenuMacro</h1>
             </div>
+            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Dark Mode">
+                <i class="fas fa-moon"></i>
+            </button>
             <p>Analyze menu photos and discover the nutritional balance of your food options</p>
         </header>
 
@@ -48,8 +51,15 @@
             </section>
 
             <section id="loading-section" class="loading-section" style="display: none;">
-                <div class="loader"></div>
-                <p>Analyzing menu items...</p>
+                <div class="loader-container">
+                    <div class="loader"></div>
+                    <i class="fas fa-search search-icon"></i>
+                    <i class="fas fa-apple-alt food-icon"></i>
+                    <i class="fas fa-hamburger food-icon"></i>
+                    <i class="fas fa-drumstick-bite food-icon"></i>
+                    <i class="fas fa-carrot food-icon"></i>
+                </div>
+                <p>Analyzing nutrients in your food...</p>
             </section>
 
             <section id="results-section" class="results-section" style="display: none;">
